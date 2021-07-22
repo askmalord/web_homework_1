@@ -18,13 +18,17 @@ public class Request {
     private final Map<String, String> headers;
     private final InputStream in;
     private static final URLEncodedUtils QUERY_STRING_PARSER = new URLEncodedUtils();
-    private static String lineOfRequest;
+    private final String lineOfRequest;
 
-    private Request(String method, String path, Map<String, String> headers, InputStream in) {
+    private Request(String method, String path, Map<String, String> headers, InputStream in, String lineOfRequest) {
         this.method = method;
+        if (path.contains("?")) {
+            path = path.substring(0, path.indexOf('?'));
+        }
         this.path = path;
         this.headers = headers;
         this.in = in;
+        this.lineOfRequest = lineOfRequest;
     }
 
     public String getMethod() {
@@ -43,14 +47,14 @@ public class Request {
         return in;
     }
 
-    public static String getLineOfRequest() {
+    public String getLineOfRequest() {
         return lineOfRequest;
     }
 
     public static Request getIncomingRequest(InputStream inputStream) throws IOException {
         var reader = new BufferedReader(new InputStreamReader(inputStream));
         var requestLine = reader.readLine();
-        lineOfRequest = requestLine;
+        var lineOfRequest = requestLine;
         var parts = requestLine.split(" ");
 
         if (parts.length != 3) {
@@ -68,11 +72,11 @@ public class Request {
             var headerValue = partsOfHeader[1];
             headers.put(headerName, headerValue);
         }
-        return new Request(method, path, headers, inputStream);
+        return new Request(method, path, headers, inputStream, lineOfRequest);
     }
 
-    public NameValuePair getQueryParam(String name) throws IOException {
-        List<NameValuePair> queryParams = getQueryParams();
+    public NameValuePair getQueryParam(Request request, String name) throws IOException {
+        List<NameValuePair> queryParams = getQueryParams(request);
         NameValuePair queryParamForReturn = null;
         for (int i = 0; i < queryParams.size(); i++) {
             NameValuePair queryParam = queryParams.get(i);
@@ -86,7 +90,8 @@ public class Request {
         else return queryParamForReturn;
     }
 
-    public static List<NameValuePair> getQueryParams() throws IOException {
+    public List<NameValuePair> getQueryParams(Request request) throws IOException {
+        var lineOfRequest = request.getLineOfRequest();
         if (lineOfRequest == null) {
             throw new IOException("Некорректный запрос");
         }

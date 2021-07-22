@@ -48,9 +48,7 @@ public class Server {
             }
 
             var path = request.getPath();
-            if (path.contains("?")) {
-                path = request.getPath().substring(0, request.getPath().indexOf('?'));
-            }
+
             Handler handler = handlers.get(request.getMethod()).get(path);
 
             if (handler == null) {
